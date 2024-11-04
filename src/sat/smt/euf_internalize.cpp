@@ -155,9 +155,7 @@ namespace euf {
         if (lit.sign()) {
             v = si.add_bool_var(e);
             s().set_external(v);
-            s().set_eliminated(v, false);
-            set_bool_var2expr(v, e);
-            m_var_trail.push_back(v);
+            s().set_eliminated(v, false);            
             sat::literal lit2 = literal(v, false);
             th_proof_hint* ph1 = nullptr, * ph2 = nullptr;
             if (use_drat()) {
@@ -184,7 +182,6 @@ namespace euf {
             SASSERT(m_egraph.find(e)->bool_var() == v);
             return lit;
         }
-
 
         set_bool_var2expr(v, e);      
         enode* n = m_egraph.find(e);

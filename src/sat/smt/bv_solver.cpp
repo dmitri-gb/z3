@@ -56,6 +56,7 @@ namespace bv {
         m_bb(m, get_config()),
         m_find(*this) {
         m_bb.set_flat_and_or(false);
+        m_bb.set_ext_gates(true);
     }
 
     bool solver::is_fixed(euf::theory_var v, expr_ref& val, sat::literal_vector& lits) {
@@ -267,7 +268,7 @@ namespace bv {
                 ++num_undef;
                 undef_idx = -static_cast<int>(i + 1);
             }
-            if (num_undef > 1)
+            if (num_undef > 1 && false)
                 return;
         }
         if (num_undef == 0)
@@ -533,12 +534,10 @@ namespace bv {
     }
 
     bool solver::unit_propagate() {
-        if (m_prop_queue_head == m_prop_queue.size())
+        if (m_prop_queue.empty())
             return false;
-        force_push();
-        ctx.push(value_trail<unsigned>(m_prop_queue_head));
-        for (; m_prop_queue_head < m_prop_queue.size() && !s().inconsistent(); ++m_prop_queue_head) {
-            auto const p = m_prop_queue[m_prop_queue_head];
+        for (unsigned i = 0; i < m_prop_queue.size() && !s().inconsistent(); ++i) {
+            auto const p = m_prop_queue[i];
             if (p.m_atom) {
                 for (auto vp : *p.m_atom)
                     propagate_bits(vp);
@@ -548,6 +547,7 @@ namespace bv {
             else 
                 propagate_bits(p.m_vp);            
         }
+        m_prop_queue.reset();
         // check_missing_propagation();
         return true;
     }
@@ -587,6 +587,8 @@ namespace bv {
         if (m_wpos[v1] == idx)
             find_wpos(v1);
 
+        bool is_fixed = s().value(m_bits[v1][m_wpos[v1]]) != l_undef;
+
         literal bit1 = m_bits[v1][idx];
         lbool   val = s().value(bit1);
         TRACE("bv", tout << "propagating v" << v1 << " #" << var2enode(v1)->get_expr_id() << "[" << idx << "] = " << val << "\n";);
@@ -613,7 +615,7 @@ namespace bv {
             if (!assign_bit(bit2, v1, v2, idx, bit1, false))
                 break;
         }
-        if (s().value(m_bits[v1][m_wpos[v1]]) != l_undef)
+        if (!is_fixed && s().value(m_bits[v1][m_wpos[v1]]) != l_undef)
             find_wpos(v1);
 
         return num_assigned > 0;
@@ -626,7 +628,7 @@ namespace bv {
     */
     sat::check_result solver::check() {
         force_push();
-        SASSERT(m_prop_queue.size() == m_prop_queue_head);
+        SASSERT(m_prop_queue.empty());
         bool ok = true;
         svector<std::pair<expr*, internalize_mode>> delay;
         for (auto kv : m_delay_internalize)
@@ -651,22 +653,19 @@ namespace bv {
     }
 
     void solver::push_core() {
-        TRACE("bv", tout << "push: " << get_num_vars() << "@" << m_prop_queue_lim.size() << "\n";);
+        TRACE("bv", tout << "push: " << get_num_vars() << "@" << m_prop_queue.size() << "\n";);
         th_euf_solver::push_core();
-        m_prop_queue_lim.push_back(m_prop_queue.size());
     }
 
     void solver::pop_core(unsigned n) {
         SASSERT(m_num_scopes == 0);
-        unsigned old_sz = m_prop_queue_lim.size() - n;
-        m_prop_queue.shrink(m_prop_queue_lim[old_sz]);
-        m_prop_queue_lim.shrink(old_sz);
         th_euf_solver::pop_core(n);
-        old_sz = get_num_vars();        
+        unsigned old_sz = get_num_vars();        
         m_bits.shrink(old_sz);
         m_wpos.shrink(old_sz);
         m_zero_one_bits.shrink(old_sz);
-        TRACE("bv", tout << "num vars " << old_sz << "@" << m_prop_queue_lim.size() << "\n";);
+        m_prop_queue.reset();
+        TRACE("bv", tout << "num vars " << old_sz << "\n";);
     }
 
     void solver::simplify() {
@@ -886,12 +885,14 @@ namespace bv {
 
     void solver::merge_eh(theory_var r1, theory_var r2, theory_var v1, theory_var v2) {
 
+
         TRACE("bv", tout << "merging: v" << v1 << " #" << var2enode(v1)->get_expr_id() << " v" << v2 << " #" << var2enode(v2)->get_expr_id() << "\n";);
 
         if (!merge_zero_one_bits(r1, r2)) {
             TRACE("bv", tout << "conflict detected\n";);
             return; // conflict was detected
         }
+        m_prop_queue.reset();
         SASSERT(m_bits[v1].size() == m_bits[v2].size());
         unsigned sz = m_bits[v1].size();
         if (sz == 1)
@@ -982,8 +983,9 @@ namespace bv {
             force_push();
             if (a)
                 for (auto curr : *a)
-                    if (propagate_eqc || find(curr.first) != find(v2) || curr.second != idx) 
-                        m_prop_queue.push_back(propagation_item(curr));  
+                    if (propagate_eqc || find(curr.first) != find(v2) || curr.second != idx) {
+                        m_prop_queue.push_back(propagation_item(curr));
+                    }
             return true;
         }
     }

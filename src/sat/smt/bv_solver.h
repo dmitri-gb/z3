@@ -234,8 +234,6 @@ namespace bv {
         mutable vector<rational>   m_power2;
         literal_vector             m_tmp_literals;
         svector<propagation_item>  m_prop_queue;
-        unsigned_vector            m_prop_queue_lim;
-        unsigned                   m_prop_queue_head = 0;
         sat::literal               m_true = sat::null_literal;
         euf::enode_vector          m_bv2ints;
         obj_map<app, lazy_mul*>   m_lazymul;

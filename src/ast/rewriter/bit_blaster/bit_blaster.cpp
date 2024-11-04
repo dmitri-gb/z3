@@ -28,7 +28,7 @@ bit_blaster_cfg::bit_blaster_cfg(bv_util & u, bit_blaster_params const & p, bool
     m_rw(rw) {
 }
 
-static void sort_args(expr * & l1, expr * & l2, expr * & l3) {
+void bit_blaster_cfg::sort_args(expr * & l1, expr * & l2, expr * & l3) {
     expr * args[3] = {l1, l2, l3};
     // ast_lt_proc is based on the AST ids. So, it is a total order on AST nodes.
     // No need for stable_sort
@@ -41,7 +41,7 @@ void bit_blaster_cfg::mk_xor3(expr * l1, expr * l2, expr * l3, expr_ref & r) {
     TRACE("xor3", tout << "#" << l1->get_id() << " #" << l2->get_id() << " #" << l3->get_id(););
     sort_args(l1, l2, l3);
     TRACE("xor3_sorted", tout << "#" << l1->get_id() << " #" << l2->get_id() << " #" << l3->get_id(););
-    if (m_params.m_bb_ext_gates) {
+    if (m_ext_gates || m_params.m_bb_ext_gates) {
         if (l1 == l2)
             r = l3;
         else if (l1 == l3)
@@ -80,7 +80,7 @@ void bit_blaster_cfg::mk_carry(expr * l1, expr * l2, expr * l3, expr_ref & r) {
     TRACE("carry", tout << "#" << l1->get_id() << " #" << l2->get_id() << " #" << l3->get_id(););
     sort_args(l1, l2, l3);
     TRACE("carry_sorted", tout << "#" << l1->get_id() << " #" << l2->get_id() << " #" << l3->get_id(););
-    if (m_params.m_bb_ext_gates) {
+    if (m_ext_gates || m_params.m_bb_ext_gates) {
         if ((m().is_false(l1) && m().is_false(l2)) ||
             (m().is_false(l1) && m().is_false(l3)) ||
             (m().is_false(l2) && m().is_false(l3)))
