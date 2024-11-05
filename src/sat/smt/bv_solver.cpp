@@ -533,11 +533,13 @@ namespace bv {
         }
     }
 
-    bool solver::unit_propagate() {
-        if (m_prop_queue.empty())
+        bool solver::unit_propagate() {
+        if (m_prop_queue_head == m_prop_queue.size())
             return false;
-        for (unsigned i = 0; i < m_prop_queue.size() && !s().inconsistent(); ++i) {
-            auto const p = m_prop_queue[i];
+        force_push();
+        ctx.push(value_trail<unsigned>(m_prop_queue_head));
+        for (; m_prop_queue_head < m_prop_queue.size() && !s().inconsistent(); ++m_prop_queue_head) {
+            auto const p = m_prop_queue[m_prop_queue_head];
             if (p.m_atom) {
                 for (auto vp : *p.m_atom)
                     propagate_bits(vp);
@@ -547,10 +549,10 @@ namespace bv {
             else 
                 propagate_bits(p.m_vp);            
         }
-        m_prop_queue.reset();
         // check_missing_propagation();
         return true;
     }
+
 
     bool solver::propagate_eq_occurs(eq_occurs const& occ) {
         auto lit = occ.m_literal;
@@ -628,7 +630,7 @@ namespace bv {
     */
     sat::check_result solver::check() {
         force_push();
-        SASSERT(m_prop_queue.empty());
+        SASSERT(m_prop_queue.size() == m_prop_queue_head);
         bool ok = true;
         svector<std::pair<expr*, internalize_mode>> delay;
         for (auto kv : m_delay_internalize)
@@ -652,20 +654,23 @@ namespace bv {
         return sat::check_result::CR_DONE;
     }
 
-    void solver::push_core() {
-        TRACE("bv", tout << "push: " << get_num_vars() << "@" << m_prop_queue.size() << "\n";);
+        void solver::push_core() {
+        TRACE("bv", tout << "push: " << get_num_vars() << "@" << m_prop_queue_lim.size() << "\n";);
         th_euf_solver::push_core();
+        m_prop_queue_lim.push_back(m_prop_queue.size());
     }
 
     void solver::pop_core(unsigned n) {
         SASSERT(m_num_scopes == 0);
+        unsigned old_sz = m_prop_queue_lim.size() - n;
+        m_prop_queue.shrink(m_prop_queue_lim[old_sz]);
+        m_prop_queue_lim.shrink(old_sz);
         th_euf_solver::pop_core(n);
-        unsigned old_sz = get_num_vars();        
+        old_sz = get_num_vars();        
         m_bits.shrink(old_sz);
         m_wpos.shrink(old_sz);
         m_zero_one_bits.shrink(old_sz);
-        m_prop_queue.reset();
-        TRACE("bv", tout << "num vars " << old_sz << "\n";);
+        TRACE("bv", tout << "num vars " << old_sz << "@" << m_prop_queue_lim.size() << "\n";);
     }
 
     void solver::simplify() {
@@ -892,7 +897,6 @@ namespace bv {
             TRACE("bv", tout << "conflict detected\n";);
             return; // conflict was detected
         }
-        m_prop_queue.reset();
         SASSERT(m_bits[v1].size() == m_bits[v2].size());
         unsigned sz = m_bits[v1].size();
         if (sz == 1)
