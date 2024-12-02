@@ -60,6 +60,7 @@ protected:
 
     expr * get_power_product(expr * t);
     expr * get_power_product(expr * t, numeral & a);
+    bool   get_ite_gcd(expr* t, numeral& a);
 
     br_status mk_flat_add_core(unsigned num_args, expr * const * args, expr_ref & result);
     br_status mk_nflat_add_core(unsigned num_args, expr * const * args, expr_ref & result);

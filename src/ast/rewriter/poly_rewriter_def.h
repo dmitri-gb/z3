@@ -442,6 +442,26 @@ inline expr * poly_rewriter<Config>::get_power_product(expr * t, numeral & a) {
     a = numeral(1);
     return t;
 }
+template<typename Config>
+bool poly_rewriter<Config>::get_ite_gcd(expr* t, numeral& a) {
+    expr* th, *el, *cond;
+    rational b, c;
+    if (is_mul(t) && to_app(t)->get_num_args() == 2 &&
+        get_ite_gcd(to_app(t)->get_arg(1), a) &&
+        is_int_numeral(to_app(t)->get_arg(0), b) && abs(b) == 1) {
+        return true;
+    }
+
+    if (M().is_ite(t, cond, th, el) &&
+        (is_int_numeral(th, b) || get_ite_gcd(th, b)) &&
+        (is_int_numeral(el, c) || get_ite_gcd(el, c))) {
+        a = gcd(b, c);
+        return true;
+    }
+    //    verbose_stream() << "not gcd " << mk_bounded_pp(t, M()) << "\n";
+    return false;
+}
+
 
 template<typename Config>
 bool poly_rewriter<Config>::is_mul(expr * t, numeral & c, expr * & pp) const {

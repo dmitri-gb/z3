@@ -67,6 +67,7 @@ class arith_rewriter : public poly_rewriter<arith_rewriter_core> {
     void get_coeffs_gcd(expr * t, numeral & g, bool & first, unsigned & num_consts);
     enum const_treatment { CT_FLOOR, CT_CEIL, CT_FALSE };
     bool div_polynomial(expr * t, numeral const & g, const_treatment ct, expr_ref & result);
+    expr_ref div_ite(expr* t, numeral const& g);        
     enum op_kind { LE, GE, EQ };
     static op_kind inv(op_kind k) { return k == LE ? GE : (k == GE ? LE : EQ); }
     bool is_bound(expr * arg1, expr * arg2, op_kind kind, expr_ref & result);

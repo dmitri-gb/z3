@@ -118,18 +118,37 @@ void arith_rewriter::get_coeffs_gcd(expr * t, numeral & g, bool & first, unsigne
             continue;
         }
         if (first) {
-            get_power_product(arg, g);
+            if (!get_ite_gcd(arg, g))
+                get_power_product(arg, g);
             SASSERT(g.is_int());
             first = false;
         }
         else {
-            get_power_product(arg, a);
+            if (!get_ite_gcd(arg, a))
+                get_power_product(arg, a);
             SASSERT(a.is_int());
             g = gcd(abs(a), g);
         }
         if (g.is_one())
             return;
     }
+}
+
+expr_ref arith_rewriter::div_ite(expr* t, numeral const& g) {
+    if (g == 1)
+        return expr_ref(t, m);
+    expr* th, *el, *c;
+    numeral n;
+    bool is_int = false;
+    if (m.is_ite(t, c, th, el)) 
+        return expr_ref(m.mk_ite(c, div_ite(th, g), div_ite(el, g)), m);
+    if (m_util.is_mul(t, th, el)) {
+        return expr_ref(m_util.mk_mul(th, div_ite(el, g)), m);
+    }
+    VERIFY(m_util.is_numeral(t, n, is_int));
+    if (n == 0)
+        return expr_ref(t, m);
+    return expr_ref(m_util.mk_numeral(n / g, is_int), m);
 }
 
 bool arith_rewriter::div_polynomial(expr * t, numeral const & g, const_treatment ct, expr_ref & result) {
@@ -157,6 +176,12 @@ bool arith_rewriter::div_polynomial(expr * t, numeral const & g, const_treatment
             }
             if (!a.is_zero())
                 new_args.push_back(m_util.mk_numeral(a, true));
+            continue;
+        }
+        if (get_ite_gcd(arg, a)) {
+            a /= g;
+            if (!a.is_zero())
+                new_args.push_back(div_ite(arg, g));
             continue;
         }
         expr * pp = get_power_product(arg, a);
