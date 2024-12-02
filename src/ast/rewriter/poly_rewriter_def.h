@@ -444,21 +444,36 @@ inline expr * poly_rewriter<Config>::get_power_product(expr * t, numeral & a) {
 }
 template<typename Config>
 bool poly_rewriter<Config>::get_ite_gcd(expr* t, numeral& a) {
-    expr* th, *el, *cond;
+    ast_mark mark;
+    //verbose_stream() << "gcd " << get_depth(t) << " " << mk_bounded_pp(t, M()) << "\n";
+    bool r = get_ite_gcd(mark, t, a);
+    //verbose_stream() << a << " " << r << "\n";
+    return r;
+}
+
+template<typename Config>
+bool poly_rewriter<Config>::get_ite_gcd(ast_mark & mark, expr* t, numeral& a) {
+    if (mark.is_marked(t)) {
+        a = 0;
+        return true;
+    }
+    expr* th, * el, * cond;
     rational b, c;
+    
     if (is_mul(t) && to_app(t)->get_num_args() == 2 &&
         get_ite_gcd(to_app(t)->get_arg(1), a) &&
         is_int_numeral(to_app(t)->get_arg(0), b) && abs(b) == 1) {
-        return true;
+        mark.mark(t, true);
+        return a != 1;
     }
 
     if (M().is_ite(t, cond, th, el) &&
-        (is_int_numeral(th, b) || get_ite_gcd(th, b)) &&
+        (is_int_numeral(th, b) || get_ite_gcd(th, b)) && 
         (is_int_numeral(el, c) || get_ite_gcd(el, c))) {
         a = gcd(b, c);
-        return true;
+        mark.mark(t, true);
+        return a != 1;
     }
-    //    verbose_stream() << "not gcd " << mk_bounded_pp(t, M()) << "\n";
     return false;
 }
 
