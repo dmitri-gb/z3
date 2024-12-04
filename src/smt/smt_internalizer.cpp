@@ -1438,7 +1438,8 @@ namespace smt {
                 m_justifications.push_back(j);
             assign(unit, j);
             inc_ref(unit);
-            // m_units_to_reassert.push_back({ expr_ref(atom, m), unit.sign(), is_relevant(unit) });
+            if (m_scope_lvl > m_search_lvl)
+                m_units_to_reassert.push_back({ expr_ref(atom, m), unit.sign(), is_relevant(unit) });
             return nullptr;
         }
         case 2:
