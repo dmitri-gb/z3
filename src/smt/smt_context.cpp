@@ -2389,6 +2389,7 @@ namespace smt {
             assign(l, b_justification::mk_axiom());
             if (is_relevant)
                 mark_as_relevant(l);
+            verbose_stream() << "reassert " << unit << ": " << mk_bounded_pp(unit, m) << "\n";
             TRACE("reassert_units", tout << "reasserting #" << unit->get_id() << " " << sign << " @ " << m_scope_lvl << "\n";);            
         }
         if (at_base_level()) 

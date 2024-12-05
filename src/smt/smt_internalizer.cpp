@@ -1438,8 +1438,10 @@ namespace smt {
                 m_justifications.push_back(j);
             assign(unit, j);
             inc_ref(unit);
-            if (m_scope_lvl > m_search_lvl)
+            if (m_scope_lvl > m_search_lvl && !j) {
+                verbose_stream() << "unit clause " << unit << ": " << mk_bounded_pp(atom, m) << "\n";
                 m_units_to_reassert.push_back({ expr_ref(atom, m), unit.sign(), is_relevant(unit) });
+            }
             return nullptr;
         }
         case 2:
